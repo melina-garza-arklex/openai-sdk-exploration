@@ -1,49 +1,133 @@
 import asyncio
-from colorama import Fore, Style
-
-
+import os
+import json
+from openai import OpenAI
+import numpy as np
 from agents import (
     Agent,
-    ItemHelpers,
-    MessageOutputItem,
     Runner,
     TResponseInputItem,
-    WebSearchTool,
     trace,
+    function_tool,
+    WebSearchTool,
+)
+from utils import (
+    scrape_page_for_rag,
+    print_bot_response,
+    create_vector_db,
+    load_vector_db,
 )
 
+from openai import OpenAI
+import faiss
+import numpy as np
+import json
 
-def print_bot_response(text):
-    print(Fore.CYAN + text + Style.RESET_ALL)
+SYSTEM_PROMPT = """
+You are a helpful assistant for Richtech Robotics customer service.
+
+Company Overview:
+- Richtech Robotics offers worker (ADAM, Scorpion), delivery (Matradee Plus, Titan, Medbot), and cleaning (DUST-E S, DUST-E MX) robots.
+- ADAM is a robot bartender that prepares tea, coffee, and cocktails. Available for rental or purchase.
+- Robots are intended for business use only (not home use).
+- ClouTea in Las Vegas is the world's first robot milk tea shop, operated by ADAM.
+- Delivery: ADAM = 2 weeks, Delivery robots = 1 month, Cleaning robots = 2 months.
+
+Always answer with accurate info from Richtech Robotics, using context when provided.
+"""
+
+
+index, metadata = None, None
+
+client = OpenAI()
+
+
+def build_rag():
+    # scrap websites
+    if not os.path.exists("RAG/rag_context.json"):
+        scraped_text = scrape_page_for_rag(
+            "https://www.richtechrobotics.com/", max_depth=20
+        )
+
+        # save context
+        with open("RAG/rag_context.json", "w", encoding="utf-8") as f:
+            json.dump(scraped_text, f, indent=2)
+
+    # Create and save FAISS vector DB
+    if not os.path.exists("RAG/faiss_index.index"):
+        with open("RAG/rag_context.json", "r", encoding="utf-8") as f:
+            blocks = json.load(f)
+        create_vector_db(
+            blocks, index_path="RAG/faiss_index.index", meta_path="RAG/metadata.json"
+        )
+
+
+@function_tool
+async def rag_search(query: str) -> str:
+    """Search Richtech Robotics knowledge base to answer the user's question with citations."""
+    # Embed the question
+    query_embedding = (
+        client.embeddings.create(input=[query], model="text-embedding-3-small")
+        .data[0]
+        .embedding
+    )
+
+    # Search FAISS
+    D, I = index.search(np.array([query_embedding], dtype="float32"), k=3)
+
+    context_blocks = []
+    for idx in I[0]:
+        if idx < len(metadata):
+            entry = metadata[idx]
+            context_blocks.append(f"[Source: {entry['url']}]\n{entry['text']}")
+
+    context = "\n\n---\n\n".join(context_blocks)
+
+    prompt = f"""
+    {SYSTEM_PROMPT}
+
+    Use ONLY the context below and system prompt above to answer the following question.
+
+    Context:
+    {context}
+
+    Question:
+    {query}
+
+    Answer with any relevant citations in the format [source: URL].
+    """
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}]
+    )
+
+    return response.choices[0].message.content
 
 
 customer_service_agent = Agent(
     name="Bot",
-    instructions="The customer service assistant helps users with customer service inquiries. It can provide information about products, services, and policies, as well as help users resolve issues and complete transactions. Company Richtech Robotics's. Headquarter is in Las Vegas; the other office is in Austin. Richtech Robotics provide worker robots (ADAM, ARM, ACE), delivery robots (Matradee, Matradee X, Matradee L, Richie), cleaning robots (DUST-E SX, DUST-E MX) and multipurpose robots (skylark). Their products are intended for business purposes, but not for home purpose; the ADAM robot is available for purchase and rental for multiple purposes. This robot bartender makes tea, coffee and cocktails. Richtech Robotics also operate the world's first robot milk tea shop, ClouTea, in Las Vegas (www.cloutea.com), where all milk tea beverages are prepared by the ADAM robot. The delivery time will be one month for the delivery robot, 2 weeks for standard ADAM, and two months for commercial cleaning robot. ",
-    tools=[WebSearchTool(
-        user_location={"type": "approximate", "city": "New York"})],
-    model="gpt-4o-mini"
+    instructions=SYSTEM_PROMPT,
+    tools=[rag_search, WebSearchTool()],
+    model="gpt-4o-mini",
 )
 
 
 async def main():
+    # customer service bot logic
     input_items: list[TResponseInputItem] = []
 
     while True:
         user_input = input("You: ")
-        if user_input == 'quit':
+        if user_input == "quit":
             return
         with trace("Customer service"):
             input_items.append({"content": user_input, "role": "user"})
             result = await Runner.run(customer_service_agent, input_items)
-
-            for new_item in result.new_items:
-                agent_name = new_item.agent.name
-                if isinstance(new_item, MessageOutputItem):
-                    print_bot_response(
-                        f"{agent_name}: {ItemHelpers.text_message_output(new_item)}")
+            print_bot_response(f"Bot: {result.final_output}")
             input_items = result.to_input_list()
 
 
 if __name__ == "__main__":
+    build_rag()
+    index, metadata = load_vector_db()
     asyncio.run(main())
