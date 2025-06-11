@@ -33,7 +33,7 @@ Company Overview:
 - ClouTea in Las Vegas is the world's first robot milk tea shop, operated by ADAM.
 - Delivery: ADAM = 2 weeks, Delivery robots = 1 month, Cleaning robots = 2 months.
 
-Always answer with accurate info from Richtech Robotics, using context when provided.
+If RAGSearch does not provide a helpful answer, try the WebSearchTool to find up-to-date or missing information.
 """
 
 
