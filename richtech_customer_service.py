@@ -12,9 +12,8 @@ from agents import (
     WebSearchTool,
 )
 from utils import (
-    scrape_page_for_rag,
     print_bot_response,
-    create_vector_db,
+    build_rag,
     load_vector_db,
 )
 
@@ -37,29 +36,7 @@ If RAGSearch does not provide a helpful answer, try the WebSearchTool to find up
 """
 
 
-index, metadata = None, None
-
 client = OpenAI()
-
-
-def build_rag():
-    # scrap websites
-    if not os.path.exists("RAG/rag_context.json"):
-        scraped_text = scrape_page_for_rag(
-            "https://www.richtechrobotics.com/", max_depth=20
-        )
-
-        # save context
-        with open("RAG/rag_context.json", "w", encoding="utf-8") as f:
-            json.dump(scraped_text, f, indent=2)
-
-    # Create and save FAISS vector DB
-    if not os.path.exists("RAG/faiss_index.index"):
-        with open("RAG/rag_context.json", "r", encoding="utf-8") as f:
-            blocks = json.load(f)
-        create_vector_db(
-            blocks, index_path="RAG/faiss_index.index", meta_path="RAG/metadata.json"
-        )
 
 
 @function_tool
@@ -128,6 +105,8 @@ async def main():
 
 
 if __name__ == "__main__":
-    build_rag()
-    index, metadata = load_vector_db()
+    rag_folder, url = "RAG_customer_service", "https://www.richtechrobotics.com/"
+    build_rag(rag_folder, url)
+    index, metadata = load_vector_db(
+        index_path=f"{rag_folder}/faiss_index.index", meta_path=f"{rag_folder}/metadata.json")
     asyncio.run(main())

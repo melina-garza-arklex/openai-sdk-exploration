@@ -1,3 +1,4 @@
+import tiktoken
 from urllib.parse import urljoin
 from tqdm import tqdm
 from openai import OpenAI
@@ -9,43 +10,59 @@ import faiss
 import openai
 import numpy as np
 import json
+import os
+
+from dotenv import load_dotenv
+load_dotenv()
 
 
-import tiktoken
+SHOPIFY_ADMIN_TOKEN = os.getenv("SHOPIFY_ADMIN_TOKEN")
+SHOPIFY_PASSWORD = os.getenv("SHOPIFY_PASSWORD")
 
 
-def print_bot_response(text):
-    print(Fore.CYAN + text + Style.RESET_ALL)
+def build_rag(rag_folder, url, is_shopify=False):
+    # scrap websites
+    if not os.path.exists(f"{rag_folder}/rag_context.json"):
+        os.makedirs(rag_folder)
+
+        scraped_text = scrape_page_for_rag(
+            url, max_depth=20, is_shopify=is_shopify
+        )
+
+        # save context
+        with open(f"{rag_folder}/rag_context.json", "w", encoding="utf-8") as f:
+            json.dump(scraped_text, f, indent=2)
+
+    # Create and save FAISS vector DB
+    if not os.path.exists(f"{rag_folder}/faiss_index.index"):
+        with open(f"{rag_folder}/rag_context.json", "r", encoding="utf-8") as f:
+            blocks = json.load(f)
+        create_vector_db(
+            blocks, index_path=f"{rag_folder}/faiss_index.index", meta_path=f"{rag_folder}/metadata.json"
+        )
 
 
-def extract_text_with_links(soup: BeautifulSoup, base_url: str) -> str:
-    output = []
-
-    for element in soup.find_all(['p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-        text_parts = []
-
-        for part in element.descendants:
-            if part.name == 'a' and part.get('href'):
-                href = urljoin(base_url, part['href'])
-                label = part.get_text(strip=True)
-                text_parts.append(f"{label} ({href})")
-            elif part.name is None and part.string:
-                stripped = part.string.strip()
-                if stripped:
-                    text_parts.append(stripped)
-
-        if text_parts:
-            output.append(" ".join(text_parts))
-
-    return "\n".join(output)
+def authenticate_shopify_storefront(session, url, password):
+    password_url = f"{url.rstrip('/')}/password"
+    payload = {"password": password}
+    try:
+        response = session.post(password_url, data=payload, timeout=10)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Authentication failed: {e}")
 
 
 visited = set()
 
 
-def scrape_page_for_rag(url: str, depth=0, max_depth=2, results=None):
+def scrape_page_for_rag(url: str, depth=0, max_depth=2, results=None, session=None, is_shopify=False):
     if results is None:
         results = []
+
+    if session is None:
+        session = requests.Session()
+        if is_shopify:
+            authenticate_shopify_storefront(session, url, SHOPIFY_PASSWORD)
 
     if url in visited or depth > max_depth:
         return results
@@ -53,7 +70,7 @@ def scrape_page_for_rag(url: str, depth=0, max_depth=2, results=None):
     visited.add(url)
 
     try:
-        response = requests.get(url, timeout=10)
+        response = session.get(url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
@@ -141,3 +158,29 @@ def load_vector_db(index_path="RAG/faiss_index.index", meta_path="RAG/metadata.j
     with open(meta_path, "r", encoding="utf-8") as f:
         metadata = json.load(f)
     return index, metadata
+
+
+def print_bot_response(text):
+    print(Fore.CYAN + text + Style.RESET_ALL)
+
+
+def extract_text_with_links(soup: BeautifulSoup, base_url: str) -> str:
+    output = []
+
+    for element in soup.find_all(['p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+        text_parts = []
+
+        for part in element.descendants:
+            if part.name == 'a' and part.get('href'):
+                href = urljoin(base_url, part['href'])
+                label = part.get_text(strip=True)
+                text_parts.append(f"{label} ({href})")
+            elif part.name is None and part.string:
+                stripped = part.string.strip()
+                if stripped:
+                    text_parts.append(stripped)
+
+        if text_parts:
+            output.append(" ".join(text_parts))
+
+    return "\n".join(output)
