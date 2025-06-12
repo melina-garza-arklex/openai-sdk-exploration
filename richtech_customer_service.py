@@ -41,7 +41,7 @@ client = OpenAI()
 
 @function_tool
 async def rag_search(query: str) -> str:
-    """Search Richtech Robotics knowledge base to answer the user's question with citations."""
+    """Search knowledge base to answer the user's question with citations."""
     # Embed the question
     query_embedding = (
         client.embeddings.create(input=[query], model="text-embedding-3-small")
