@@ -1,6 +1,7 @@
 import asyncio
 import os
 import requests
+import time
 from utils import print_bot_response, build_rag, load_vector_db
 from agents import trace, Runner, TResponseInputItem, Agent, function_tool
 from openai import OpenAI
@@ -44,6 +45,12 @@ def search_products(product_search: str):
         description
         totalInventory
         onlineStoreUrl
+        priceRange {{
+            minVariantPrice {{
+                amount
+                currencyCode
+            }}
+        }}
         images(first: 1) {{
                                 edges {{
                                     node {{
@@ -53,6 +60,7 @@ def search_products(product_search: str):
                                 }}
                             }}
         }}
+       
     }}
     }}
     """
@@ -91,6 +99,12 @@ def get_products():
         handle
         totalInventory
         onlineStoreUrl
+        priceRange {
+        minVariantPrice {
+            amount
+            currencyCode
+        }
+        }
         images(first: 1) {
                         edges {
                             node {
@@ -100,6 +114,7 @@ def get_products():
                         }
                     }
         }
+        
     }
     }
     """
@@ -177,8 +192,10 @@ async def main():
         if user_input == "quit":
             return
         with trace("Shopify Bot"):
+            start_time: float = time.time()
             input_items.append({"content": user_input, "role": "user"})
             result = await Runner.run(shopify_agent, input_items)
+            print(f"getAPIBotResponse Time: {time.time() - start_time}")
             print_bot_response(f"Bot: {result.final_output}")
             input_items = result.to_input_list()
 
