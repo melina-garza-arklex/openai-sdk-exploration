@@ -83,13 +83,22 @@ def get_products():
 
     query = """
     query GetProducts {
-    products(first: 5) {
+    products(first: 4) {
         nodes {
         id
         title
         description
+        handle
         totalInventory
         onlineStoreUrl
+        images(first: 1) {
+                        edges {
+                            node {
+                                src
+                                altText
+                            }
+                        }
+                    }
         }
     }
     }
@@ -101,8 +110,11 @@ def get_products():
 
     response = requests.post(url, headers=headers, json=payload)
     if response.status_code == 200:
-        data = response.json()
-        return data
+        products = response.json()['data']['products']['nodes']
+        # create link for product
+        for product in products:
+            product['onlineStoreUrl'] = f"{SHOPIFY_URL}/products/{product.get('handle')}"
+        return products
     else:
         print(f"❌ Error {response.status_code}: {response.text}")
 
@@ -172,7 +184,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    rag_folder, url = "RAG_shopify", "https://arklex-demo-store-1.myshopify.com/"
+    rag_folder, url = "RAG_shopify", SHOPIFY_URL
     build_rag(rag_folder, url, is_shopify=True)
     index, metadata = load_vector_db(
         index_path=f"{rag_folder}/faiss_index.index", meta_path=f"{rag_folder}/metadata.json")
