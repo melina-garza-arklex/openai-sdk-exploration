@@ -16,7 +16,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-SHOPIFY_ADMIN_TOKEN = os.getenv("SHOPIFY_ADMIN_TOKEN")
 SHOPIFY_PASSWORD = os.getenv("SHOPIFY_PASSWORD")
 
 
