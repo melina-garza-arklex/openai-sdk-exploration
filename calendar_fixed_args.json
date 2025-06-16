@@ -1,0 +1,4 @@
+{
+    "service_account_info": "<credential json content from service account app key>",
+    "delegated_user": "<service account user>"
+}
