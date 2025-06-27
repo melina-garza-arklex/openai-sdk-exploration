@@ -32,3 +32,7 @@ Bot: Your demo with ADAM has been successfully booked for June 19, 2025, at 2 PM
 If you have any other questions or need further assistance, feel free to ask!  
 
 ```
+## Attempt at using `FileSearchTool` for RAG
+The `FileSearchTool` allows retrieving information from your OpenAI Vector Stores. Attempted to use this for RAG but it did not work very well. All files need to be downloaded locally or already in desired format(e.g., txt, pdf, md, etc.) online. No built in webscrapping. 
+This is how you run it: `cd openai_sdk_RAG_test`, `python openai-sdk-RAG-discovery.py` 
+
