@@ -1,0 +1,19 @@
+Richtech Robotics Inc. (Nasdaq: RR)
+-----------------------------------
+
+Overview:
+- Founded: ~2016, headquartered in Las Vegas, NV (with planned expansion in Newark, CA) :contentReference[oaicite:1]{index=1}
+- Focus: AI-driven service robotics for hospitality, healthcare, retail, automotive repair, and food/beverage sectors :contentReference[oaicite:2]{index=2}
+- Deployment: Over 300 robots across the U.S. :contentReference[oaicite:3]{index=3}
+
+Key Product Lines:
+- **ADAM**: Two‑armed robot barista serving coffee, boba tea, and espresso in environments like Clouffee & Tea, Walmart ghost kitchens, and food courts :contentReference[oaicite:4]{index=4}
+- **Scorpion**: Robotic bartending platform demonstrated at ProWein (Germany) and deployed in Walmart One Kitchen in Peachtree City, GA :contentReference[oaicite:5]{index=5}
+- **Titan**: Heavy‑payload delivery robot for automotive service centers, winner of SupplyTech Breakthrough “Robotics Innovation of the Year” (June 2025) :contentReference[oaicite:6]{index=6}
+- **Matradee Plus**, **Medbot**, **Matradee L**, **DUST‑E S**: Serving restaurants, medical facilities, cleaning & delivery :contentReference[oaicite:7]{index=7}
+
+Strategic Initiatives:
+- **Richtech Accelerator Program** (launched Feb 2025): Collaborates with universities (e.g., Columbia) to integrate localized AI into robotics platforms (ADAM, Scorpion) :contentReference[oaicite:8]{index=8}
+- **Manufacturing expansion**: Acquired 20,000 ft² site in Las Vegas to quadruple production capacity; lease for Newark, CA office to strengthen engineering capabilities :contentReference[oaicite:9]{index=9}
+- **Global outreach**: Exhibited at CES 2025 and ProWein 2025, signaling growth beyond U.S. :contentReference[oaicite:10]{index=10}
+- **
